@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'math_expression_evaluator.dart';
 
 class CalculatorPage extends StatefulWidget {
   const CalculatorPage({super.key});
@@ -9,27 +8,127 @@ class CalculatorPage extends StatefulWidget {
 }
 
 class _CalculatorPageState extends State<CalculatorPage> {
-  String display = '0'; // Changed to String for better display handling
+  String display = '0';
+  String storedNumber = '';
+  String currentOperation = '';
+  bool shouldResetDisplay = false;
+
   void buttonPressed(String value) {
     setState(() {
-      if (value == "x") {
-        display += "*";
-      } else if (value == ("+/-")) {
-        display = (int.parse(display) * -1).toString();
-      } else if (value == 'C') {
-        display = '0'; // Clear the display
-      } else if (value == '=') {
-        // Perform calculation and update display
-        MathExpressionEvaluator evaluator = MathExpressionEvaluator(display);
-        display = evaluator.evaluate().toString(); // Placeholder for result
-      } else {
-        if (display == '0') {
-          display = value; // Replace zero with the first number pressed
-        } else {
-          display += value; // Append the value pressed
-        }
+      switch (value) {
+        case 'C':
+          _clear();
+          break;
+        case '+/-':
+          _toggleSign();
+          break;
+        case '%':
+          _calculatePercentage();
+          break;
+        case '.':
+          _addDecimalPoint();
+          break;
+        case '+':
+        case '-':
+        case 'x':
+        case '/':
+          _handleOperation(value);
+          break;
+        case '=':
+          _calculateResult();
+          break;
+        default:
+          _appendNumber(value);
       }
     });
+  }
+
+  void _clear() {
+    display = '0';
+    storedNumber = '';
+    currentOperation = '';
+    shouldResetDisplay = false;
+  }
+
+  void _toggleSign() {
+    if (display == '0') return;
+    display = (double.parse(display) * -1).toString();
+    if (display.endsWith('.0')) {
+      display = display.substring(0, display.length - 2);
+    }
+  }
+
+  void _calculatePercentage() {
+    if (display == '0') return;
+    double value = double.parse(display) / 100;
+    display = value.toString();
+    if (display.endsWith('.0')) {
+      display = display.substring(0, display.length - 2);
+    }
+  }
+
+  void _addDecimalPoint() {
+    if (!display.contains('.')) {
+      display = '$display.';
+    }
+  }
+
+  void _handleOperation(String operation) {
+    if (storedNumber.isEmpty) {
+      storedNumber = display;
+    } else if (currentOperation.isNotEmpty) {
+      _calculateResult();
+      storedNumber = display;
+    }
+    currentOperation = operation;
+    shouldResetDisplay = true;
+  }
+
+  void _appendNumber(String number) {
+    if (shouldResetDisplay) {
+      display = number;
+      shouldResetDisplay = false;
+    } else {
+      display = display == '0' ? number : display + number;
+    }
+  }
+
+  void _calculateResult() {
+    if (storedNumber.isEmpty || currentOperation.isEmpty) return;
+
+    double num1 = double.parse(storedNumber);
+    double num2 = double.parse(display);
+    double result;
+
+    switch (currentOperation) {
+      case '+':
+        result = num1 + num2;
+        break;
+      case '-':
+        result = num1 - num2;
+        break;
+      case 'x':
+        result = num1 * num2;
+        break;
+      case '/':
+        if (num2 == 0) {
+          display = 'Error';
+          storedNumber = '';
+          currentOperation = '';
+          return;
+        }
+        result = num1 / num2;
+        break;
+      default:
+        return;
+    }
+
+    display = result.toString();
+    if (display.endsWith('.0')) {
+      display = display.substring(0, display.length - 2);
+    }
+    storedNumber = '';
+    currentOperation = '';
   }
 
   Widget buildButton(String value,
@@ -43,12 +142,11 @@ class _CalculatorPageState extends State<CalculatorPage> {
       child: ElevatedButton(
         onPressed: () => buttonPressed(value),
         style: ElevatedButton.styleFrom(
-          shape: value == "0" // Check specifically for "0" button
+          shape: value == "0"
               ? RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(
-                      30), // Rounded corners for zero button
+                  borderRadius: BorderRadius.circular(30),
                 )
-              : const CircleBorder(), // Circular shape for all other buttons
+              : const CircleBorder(),
           padding: const EdgeInsets.all(20),
           backgroundColor: Color.fromRGBO(r, g, b, o),
           foregroundColor: Colors.white,
@@ -60,6 +158,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Build method remains unchanged
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -90,8 +189,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
                   buildButton('C', r: 128, g: 128, b: 128, o: 1),
                   buildButton("+/-", r: 128, g: 128, b: 128, o: 1),
                   buildButton("%", r: 128, g: 128, b: 128, o: 1),
-                  buildButton("/",
-                      isZeroButton: true, r: 255, g: 191, b: 0, o: 1),
+                  buildButton("/", r: 255, g: 191, b: 0, o: 1),
                 ],
               ),
               Row(
@@ -100,8 +198,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
                   buildButton("7"),
                   buildButton("8"),
                   buildButton("9"),
-                  buildButton("x",
-                      isZeroButton: true, r: 255, g: 191, b: 0, o: 1),
+                  buildButton("x", r: 255, g: 191, b: 0, o: 1),
                 ],
               ),
               Row(
@@ -110,8 +207,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
                   buildButton("4"),
                   buildButton("5"),
                   buildButton("6"),
-                  buildButton("-",
-                      isZeroButton: true, r: 255, g: 191, b: 0, o: 1),
+                  buildButton("-", r: 255, g: 191, b: 0, o: 1),
                 ],
               ),
               Row(
@@ -120,30 +216,23 @@ class _CalculatorPageState extends State<CalculatorPage> {
                   buildButton("1"),
                   buildButton("2"),
                   buildButton("3"),
-                  buildButton("+",
-                      isZeroButton: true, r: 255, g: 191, b: 0, o: 1),
+                  buildButton("+", r: 255, g: 191, b: 0, o: 1),
                 ],
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   Expanded(
-                    flex: 2, // 50% of the space
-                    child: buildButton("0",
-                        isZeroButton: true), // Use default shape for "0"
+                    flex: 2,
+                    child: buildButton("0", isZeroButton: true),
                   ),
                   Expanded(
-                    flex: 1, // 25% of the space
-                    child: buildButton("."), // Use default shape for "."
+                    flex: 1,
+                    child: buildButton("."),
                   ),
                   Expanded(
-                    flex: 1, // 25% of the space
-                    child: buildButton("=",
-                        isZeroButton: true,
-                        r: 255,
-                        g: 191,
-                        b: 0,
-                        o: 1), // Use default shape for "="
+                    flex: 1,
+                    child: buildButton("=", r: 255, g: 191, b: 0, o: 1),
                   ),
                 ],
               ),
